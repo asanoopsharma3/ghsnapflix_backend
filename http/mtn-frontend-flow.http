@@ -1,0 +1,30 @@
+@baseUrl = http://localhost:3002/api/v1
+@msisdn = 27123456789
+@otp = 1234
+@plan_id = 26801220000007963
+
+### 1. Send OTP (enter msisdn)
+POST {{baseUrl}}/mtn/otp/send
+Content-Type: application/json
+
+{
+  "msisdn": "{{msisdn}}"
+}
+
+### 2. Verify OTP (set @otp from SMS)
+POST {{baseUrl}}/mtn/otp/verify
+Content-Type: application/json
+
+{
+  "msisdn": "{{msisdn}}",
+  "otp": "{{otp}}"
+}
+
+### 3. Subscribe plan (saves to subscription_misdns)
+POST {{baseUrl}}/mtn/subscribe
+Content-Type: application/json
+
+{
+  "msisdn": "{{msisdn}}",
+  "plan_id": "{{plan_id}}"
+}

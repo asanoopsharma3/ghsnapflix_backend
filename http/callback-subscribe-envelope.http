@@ -1,0 +1,9 @@
+### Partner format — JSON fields in single `code` query param (GET only)
+@baseUrl = http://localhost:3003/api/v1
+
+GET {{baseUrl}}/callback?code=268012000007097","sequenceNumber":"4fb0e13c-adbf-53f9-9dd2-96a2f6d3f1d4","data":{"serviceType":"games_Games_98","contentId":"-1","resultCode":"0","renFlag":"Y","requestNo":"4003562882605151927","result":"Success","OptionalParameter3":"UNSUB3D","sequenceNo":"d9d084e462f84481b073d5e9eee7eedf","callingParty":"26878146285","newContentId":"-1","bearerId":"API","operationId":"GR","requestedPlan":"26801220000007822","appliededPlan":"26801220000007822_R","chargeAmount":"1.0","serviceNode":"UNISOLUTION","msisdn":"26878146285","serviceId":"268012000007097","keyword":"","category":"-1","validityDays":"2"},"transactionId":"rrt-8917434836422684028-d-geu1-64532-703588-1","notificationType":"SUBSCRIBE"}
+
+###
+
+### Flat query params + JSON in `data` (missing fields read from data)
+GET {{baseUrl}}/callback?code=268012000007097&sequenceNumber=4fb0e13c-adbf-53f9-9dd2-96a2f6d3f1d4&transactionId=rrt-test&notificationType=SUBSCRIBE&data={"requestNo":"4003562882605151928","result":"Success","serviceType":"games_Games_98","chargeAmount":"1.0","msisdn":"26878146285","serviceId":"268012000007097"}

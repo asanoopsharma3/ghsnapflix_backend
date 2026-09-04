@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:3003/api/v1
+
+### 1. Upload Excel (saved to storage/uploads/mtn/)
+POST {{baseUrl}}/mtn/subscriptions/upload
+Content-Type: multipart/form-data; boundary=----FormBoundary
+
+------FormBoundary
+Content-Disposition: form-data; name="file"; filename="msisdns.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./msisdns.xlsx
+------FormBoundary--
+
+### 2. Start subscription for batch (calls MTN API in background)
+POST {{baseUrl}}/mtn/subscriptions/batches/1/subscribe
+
+### 3. List batches
+GET {{baseUrl}}/mtn/subscriptions/batches
+
+### 4. Batch status + queue summary
+GET {{baseUrl}}/mtn/subscriptions/batches/1
+
+### 5. Download stored Excel file
+GET {{baseUrl}}/mtn/subscriptions/batches/1/file
+
+### 6. Queue stats
+GET {{baseUrl}}/mtn/subscriptions/queue/stats
+
+### 7. Manually process queue (Excel + callback auto)
+POST {{baseUrl}}/mtn/subscriptions/queue/process
+
+### 8. Callback auto stats (cron runs automatically on server)
+GET {{baseUrl}}/mtn/subscriptions/callback-auto/stats
+
+### 9. Callback auto run now (manual trigger)
+POST {{baseUrl}}/mtn/subscriptions/callback-auto/run
