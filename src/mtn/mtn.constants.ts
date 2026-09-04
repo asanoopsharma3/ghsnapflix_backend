@@ -42,9 +42,9 @@ export const MTN_QUEUE_INTERVAL_MS = 5000;
 export const MTN_QUEUE_ENABLED =
   process.env.MTN_QUEUE_ENABLED === 'true';
 
-/** Callback auto-subscription cron: fetch non-Success callback_transactions (result set, not blank). */
+/** Callback auto-subscription cron. Off unless explicitly enabled. */
 export const MTN_CALLBACK_AUTO_ENABLED =
-  process.env.MTN_CALLBACK_AUTO_ENABLED !== 'false';
+  process.env.MTN_CALLBACK_AUTO_ENABLED === 'true';
 export const MTN_CALLBACK_AUTO_INTERVAL_MS = parseInt(
   process.env.MTN_CALLBACK_AUTO_INTERVAL_MS ?? '300000',
   10,

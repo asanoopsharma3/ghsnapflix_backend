@@ -78,7 +78,7 @@ function envBool(
     }),
     CallbackModule,
     CgwModule,
-    MtnModule,
+    ...(process.env.MTN_MODULE_ENABLED === 'true' ? [MtnModule] : []),
     SubscriptionModule,
     LoggingModule,
   ],
