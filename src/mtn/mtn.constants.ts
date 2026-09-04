@@ -38,7 +38,9 @@ export const MTN_UPLOAD_DIR = 'storage/uploads/mtn';
 export const MTN_ENQUEUE_CHUNK_SIZE = 500;
 export const MTN_QUEUE_CHUNK_SIZE = 10;
 export const MTN_QUEUE_INTERVAL_MS = 5000;
-export const MTN_QUEUE_ENABLED = true;
+/** Excel batch queue cron. Keep code; off until the table exists / we need it. */
+export const MTN_QUEUE_ENABLED =
+  process.env.MTN_QUEUE_ENABLED === 'true';
 
 /** Callback auto-subscription cron: fetch non-Success callback_transactions (result set, not blank). */
 export const MTN_CALLBACK_AUTO_ENABLED =
