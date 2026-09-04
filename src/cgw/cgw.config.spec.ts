@@ -75,6 +75,7 @@ describe('cgw.config', () => {
     ).toEqual({
       msisdn: '233244123456',
       status: '200',
+      statusMessage: undefined,
       offerId: '9923310010',
       cgid: 'abc',
     });
@@ -82,9 +83,32 @@ describe('cgw.config', () => {
 
   it('maps CGW status codes', () => {
     expect(mapCGWStatus('200').success).toBe(true);
+    expect(mapCGWStatus('200').message).toBe('Subscription successful.');
     expect(mapCGWStatus(0).success).toBe(true);
-    expect(mapCGWStatus('2').message).toBe('Low balance');
-    expect(mapCGWStatus('11').message).toBe('No consent');
+    expect(mapCGWStatus('2').message).toBe(
+      'Low balance. Please recharge and try again.',
+    );
+    expect(mapCGWStatus('11').message).toBe(
+      'No consent. Please accept and try again.',
+    );
+    expect(mapCGWStatus('55').message).toContain('Low balance');
+    expect(mapCGWStatus('644').message).toContain('Duplicate');
+    expect(mapCGWStatus('unknown').message).not.toMatch(/\d/);
     expect(mapCGWStatus('unknown').success).toBe(false);
+  });
+
+  it('maps overlapping codes using status message', () => {
+    expect(mapCGWStatus('1').message).toContain('Activation failed');
+    expect(
+      mapCGWStatus('1', { statusMessage: 'InvalidOTPCase' }).message,
+    ).toContain('Invalid OTP');
+    expect(mapCGWStatus('13').message).toContain('Consent error');
+    expect(
+      mapCGWStatus('13', { statusMessage: 'Invalid OTP' }).message,
+    ).toContain('Invalid OTP');
+    expect(
+      mapCGWStatus(undefined, { statusMessage: 'AlreadySubscribedCase' })
+        .success,
+    ).toBe(true);
   });
 });

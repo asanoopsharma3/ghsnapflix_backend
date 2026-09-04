@@ -30,6 +30,7 @@ export type CgwStatusMapping = {
 export type ParsedCgwCallback = {
   msisdn: string | undefined;
   status: string | undefined;
+  statusMessage: string | undefined;
   offerId: string | undefined;
   cgid: string | undefined;
 };
@@ -161,6 +162,20 @@ export function parseCGWCallback(
       'billingStatus',
       'BillingStatus',
       'resultCode',
+      'statusCode',
+      'StatusCode',
+    ]),
+    statusMessage: firstDefinedValue(payload, [
+      'statusMessage',
+      'StatusMessage',
+      'resultMessage',
+      'ResultMessage',
+      'message',
+      'Message',
+      'reason',
+      'Reason',
+      'description',
+      'Description',
     ]),
     offerId: firstDefinedValue(payload, [
       'offerId',
@@ -172,85 +187,154 @@ export function parseCGWCallback(
   };
 }
 
-export function mapCGWStatus(
-  statusCode: unknown,
-  _options?: { offerCode?: string },
+function mapping(
+  subscriptionStatus: CgwStatusMapping['subscriptionStatus'],
+  success: boolean,
+  message: string,
 ): CgwStatusMapping {
-  const normalizedStatus = String(statusCode ?? '').trim().toLowerCase();
+  return { subscriptionStatus, success, message };
+}
 
-  const statusMap: Record<string, CgwStatusMapping> = {
-    '200': { subscriptionStatus: 'active', success: true, message: 'Success' },
-    '0': { subscriptionStatus: 'active', success: true, message: 'Success' },
-    '00': { subscriptionStatus: 'active', success: true, message: 'Success' },
-    ok: { subscriptionStatus: 'active', success: true, message: 'Success' },
-    active: { subscriptionStatus: 'active', success: true, message: 'Success' },
-    activated: {
-      subscriptionStatus: 'active',
-      success: true,
-      message: 'Success',
-    },
-    success: { subscriptionStatus: 'active', success: true, message: 'Success' },
-    successful: {
-      subscriptionStatus: 'active',
-      success: true,
-      message: 'Success',
-    },
-    succuss: { subscriptionStatus: 'active', success: true, message: 'Success' },
-    '1': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Activation failed',
-    },
-    '112': {
-      subscriptionStatus: 'suspended',
-      success: false,
-      message: 'Subscription in progress',
-    },
-    '11': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'No consent',
-    },
-    '12': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Invalid Consent',
-    },
-    '13': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Error consent',
-    },
-    '2': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Low balance',
-    },
-    '63': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Low balance',
-    },
-    '29': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Low balance',
-    },
-    '26': {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: 'Low balance',
-    },
+const SUCCESS = mapping('active', true, 'Subscription successful.');
+const ACTIVATION_FAILED = mapping(
+  'deactivated',
+  false,
+  'Activation failed. Please try again.',
+);
+const IN_PROGRESS = mapping(
+  'suspended',
+  false,
+  'Subscription in progress. Please wait a moment.',
+);
+const NO_CONSENT = mapping(
+  'deactivated',
+  false,
+  'No consent. Please accept and try again.',
+);
+const INVALID_CONSENT = mapping(
+  'deactivated',
+  false,
+  'Invalid consent. Please try again.',
+);
+const ERROR_CONSENT = mapping(
+  'deactivated',
+  false,
+  'Consent error. Please try again.',
+);
+const LOW_BALANCE = mapping(
+  'deactivated',
+  false,
+  'Low balance. Please recharge and try again.',
+);
+const ALREADY_SUBSCRIBED = mapping(
+  'active',
+  true,
+  'You are already subscribed.',
+);
+const DUPLICATE = mapping(
+  'deactivated',
+  false,
+  'Duplicate subscription. Please try again later.',
+);
+const INVALID_OTP = mapping(
+  'deactivated',
+  false,
+  'Invalid OTP. Please try again.',
+);
+const UNKNOWN_FAIL = mapping(
+  'deactivated',
+  false,
+  'We could not complete your subscription. Please try again.',
+);
+
+function normalizeLookup(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_\-]+/g, '');
+}
+
+function mapByStatusMessage(statusMessage: unknown): CgwStatusMapping | null {
+  const key = normalizeLookup(statusMessage);
+  if (!key) return null;
+
+  const exact: Record<string, CgwStatusMapping> = {
+    success: SUCCESS,
+    succuss: SUCCESS,
+    successful: SUCCESS,
+    activationfailed: ACTIVATION_FAILED,
+    subscriptioninprogress: IN_PROGRESS,
+    noconsent: NO_CONSENT,
+    invalidconsent: INVALID_CONSENT,
+    errorconsent: ERROR_CONSENT,
+    consenterror: ERROR_CONSENT,
+    lowbalance: LOW_BALANCE,
+    alreadysubscribedcase: ALREADY_SUBSCRIBED,
+    alreadysubscribed: ALREADY_SUBSCRIBED,
+    failedduplicatesubscription: DUPLICATE,
+    duplicatesubscription: DUPLICATE,
+    invalidotpcase: INVALID_OTP,
+    invalidotp: INVALID_OTP,
   };
 
-  return (
-    statusMap[String(statusCode)] ||
-    statusMap[normalizedStatus] || {
-      subscriptionStatus: 'deactivated',
-      success: false,
-      message: normalizedStatus
-        ? `Unknown status code: ${statusCode}`
-        : 'The payment provider did not return a billing status. Please contact support if airtime was deducted.',
-    }
-  );
+  if (exact[key]) return exact[key];
+  if (key.includes('invalidotp')) return INVALID_OTP;
+  if (key.includes('lowbalance') || key.includes('insufficient')) {
+    return LOW_BALANCE;
+  }
+  if (key.includes('alreadysubscribed')) return ALREADY_SUBSCRIBED;
+  if (key.includes('duplicate')) return DUPLICATE;
+  if (key.includes('noconsent')) return NO_CONSENT;
+  if (key.includes('invalidconsent')) return INVALID_CONSENT;
+  if (key.includes('errorconsent') || key.includes('consenterror')) {
+    return ERROR_CONSENT;
+  }
+  if (key.includes('inprogress')) return IN_PROGRESS;
+  if (key.includes('activationfailed')) return ACTIVATION_FAILED;
+  if (key === 'success' || key.includes('successful')) return SUCCESS;
+  return null;
+}
+
+export function mapCGWStatus(
+  statusCode: unknown,
+  options?: { offerCode?: string; statusMessage?: string },
+): CgwStatusMapping {
+  const code = String(statusCode ?? '').trim();
+  const codeKey = code.toLowerCase();
+  const fromMessage = mapByStatusMessage(options?.statusMessage);
+  const statusMap: Record<string, CgwStatusMapping> = {
+    '200': SUCCESS,
+    '0': SUCCESS,
+    '00': SUCCESS,
+    ok: SUCCESS,
+    active: SUCCESS,
+    activated: SUCCESS,
+    success: SUCCESS,
+    successful: SUCCESS,
+    succuss: SUCCESS,
+    '1': ACTIVATION_FAILED,
+    '112': IN_PROGRESS,
+    '11': NO_CONSENT,
+    '12': INVALID_CONSENT,
+    '13': ERROR_CONSENT,
+    '2': LOW_BALANCE,
+    '63': LOW_BALANCE,
+    '29': LOW_BALANCE,
+    '26': LOW_BALANCE,
+    '55': LOW_BALANCE,
+    '111': LOW_BALANCE,
+    '9': ALREADY_SUBSCRIBED,
+    '115': ALREADY_SUBSCRIBED,
+    '644': DUPLICATE,
+    '91': INVALID_OTP,
+    '186': INVALID_OTP,
+  };
+  const fromCode = statusMap[code] || statusMap[codeKey];
+
+  // Codes 1 and 13 are reused: activation/consent vs Invalid OTP.
+  if (code === '1' || code === '13') {
+    return fromMessage || fromCode || UNKNOWN_FAIL;
+  }
+
+  return fromCode || fromMessage || UNKNOWN_FAIL;
 }

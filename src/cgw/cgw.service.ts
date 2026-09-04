@@ -441,7 +441,9 @@ export class CgwService {
 
     const params = new URLSearchParams({
       subscribed: 'false',
-      reason: statusMapping?.message || 'Unknown status',
+      reason:
+        statusMapping?.message ||
+        'We could not complete your subscription. Please try again.',
       offerCode,
     });
 
