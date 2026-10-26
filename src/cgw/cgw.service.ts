@@ -65,11 +65,7 @@ export class CgwService {
         this.body(req).offerCode,
         this.settings.offerCode,
       );
-      const redirectUrl = this.firstString(
-        req.query.redirectUrl,
-        this.body(req).redirectUrl,
-        this.settings.heRedirectUrl,
-      );
+      const redirectUrl = this.settings.heRedirectUrl;
       const mobileNumber = this.firstString(
         req.query.mobileNumber,
         this.body(req).mobileNumber,
@@ -114,11 +110,7 @@ export class CgwService {
         body.offerCode,
         this.settings.offerCode,
       );
-      const redirectUrl = this.firstString(
-        req.query.redirectUrl,
-        body.redirectUrl,
-        this.settings.callbackUrl,
-      );
+      const redirectUrl = this.settings.callbackUrl;
 
       if (!msisdnFromHeader && !msisdnFromBody) {
         return {
