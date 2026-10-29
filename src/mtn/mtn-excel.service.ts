@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Cell, Workbook } from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { normalizeMtnPlanId } from './mtn-plan.util';
@@ -92,6 +91,7 @@ export class MtnExcelService {
     filePath: string,
     ext: string,
   ): Promise<string[][]> {
+    const { Workbook } = await this.loadExcelJs();
     const workbook = new Workbook();
     if (ext === '.csv') {
       await workbook.csv.readFile(filePath);
@@ -109,7 +109,9 @@ export class MtnExcelService {
     sheet.eachRow({ includeEmpty: true }, (row) => {
       const cells: string[] = [];
       for (let i = 1; i <= colCount; i++) {
-        cells.push(this.cellToString(row.getCell(i)));
+        cells.push(
+          this.cellToString(row.getCell(i) as { value?: unknown; text?: string }),
+        );
       }
       rows.push(cells);
     });
@@ -117,7 +119,20 @@ export class MtnExcelService {
     return rows;
   }
 
-  private cellToString(cell: Cell): string {
+  private async loadExcelJs(): Promise<typeof import('exceljs')> {
+    try {
+      return await import('exceljs');
+    } catch {
+      throw new BadRequestException(
+        'Excel support is not installed. Run npm install on the server.',
+      );
+    }
+  }
+
+  private cellToString(cell: {
+    value?: unknown;
+    text?: string;
+  }): string {
     const value = cell.value;
     if (value === undefined || value === null) return '';
     if (typeof value === 'object' && 'text' in value && value.text != null) {

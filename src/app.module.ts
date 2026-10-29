@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, type Type } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -19,8 +19,22 @@ import { SdpCallback } from './entities/sdp-callback.entity';
 import { SdpLog } from './entities/sdp-log.entity';
 import { SubscriptionMisdn } from './entities/subscription-misdn.entity';
 import { LoggingModule } from './logging/logging.module';
-import { MtnModule } from './mtn/mtn.module';
 import { SubscriptionModule } from './subscription/subscription.module';
+
+function loadMtnModuleIfEnabled(): Type[] {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('dotenv').config();
+  } catch {
+    /* ConfigModule.forRoot also loads .env */
+  }
+  if (process.env.MTN_MODULE_ENABLED !== 'true') {
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { MtnModule } = require('./mtn/mtn.module');
+  return [MtnModule];
+}
 
 function envBool(
   config: ConfigService,
@@ -78,7 +92,7 @@ function envBool(
     }),
     CallbackModule,
     CgwModule,
-    ...(process.env.MTN_MODULE_ENABLED === 'true' ? [MtnModule] : []),
+    ...loadMtnModuleIfEnabled(),
     SubscriptionModule,
     LoggingModule,
   ],
