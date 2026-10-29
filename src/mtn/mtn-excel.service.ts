@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Cell, Workbook } from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as XLSX from 'xlsx';
 import { normalizeMtnPlanId } from './mtn-plan.util';
+
 const MSISDN_HEADER_NAMES = [
   'msisdn',
   'misdn',
@@ -21,6 +22,7 @@ const PLAN_ID_HEADER_NAMES = [
   'subscription_id',
   'subscriptionid',
 ];
+
 export type MtnSubscriptionRow = {
   msisdn: string;
   planId: string;
@@ -28,31 +30,21 @@ export type MtnSubscriptionRow = {
 
 @Injectable()
 export class MtnExcelService {
-  readSubscriptionRowsFromFile(filePath: string): MtnSubscriptionRow[] {
+  async readSubscriptionRowsFromFile(
+    filePath: string,
+  ): Promise<MtnSubscriptionRow[]> {
     if (!fs.existsSync(filePath)) {
       throw new BadRequestException(`File not found: ${filePath}`);
     }
 
     const ext = path.extname(filePath).toLowerCase();
-    if (!['.xlsx', '.xls', '.csv'].includes(ext)) {
+    if (!['.xlsx', '.csv'].includes(ext)) {
       throw new BadRequestException(
-        'Only .xlsx, .xls, and .csv files are supported',
+        'Only .xlsx and .csv files are supported',
       );
     }
 
-    const workbook = XLSX.readFile(filePath, { cellDates: false });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      throw new BadRequestException('Excel file has no sheets');
-    }
-
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<(string | number)[]>(sheet, {
-      header: 1,
-      defval: '',
-      raw: false,
-    });
-
+    const rows = await this.readSheetRows(filePath, ext);
     if (!rows.length) {
       throw new BadRequestException('Excel sheet is empty');
     }
@@ -96,7 +88,49 @@ export class MtnExcelService {
     return subscriptionRows;
   }
 
-  private resolveColumnLayout(rows: (string | number)[][]): {
+  private async readSheetRows(
+    filePath: string,
+    ext: string,
+  ): Promise<string[][]> {
+    const workbook = new Workbook();
+    if (ext === '.csv') {
+      await workbook.csv.readFile(filePath);
+    } else {
+      await workbook.xlsx.readFile(filePath);
+    }
+
+    const sheet = workbook.worksheets[0];
+    if (!sheet) {
+      throw new BadRequestException('Excel file has no sheets');
+    }
+
+    const colCount = Math.max(sheet.columnCount, 1);
+    const rows: string[][] = [];
+    sheet.eachRow({ includeEmpty: true }, (row) => {
+      const cells: string[] = [];
+      for (let i = 1; i <= colCount; i++) {
+        cells.push(this.cellToString(row.getCell(i)));
+      }
+      rows.push(cells);
+    });
+
+    return rows;
+  }
+
+  private cellToString(cell: Cell): string {
+    const value = cell.value;
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'object' && 'text' in value && value.text != null) {
+      return String(value.text);
+    }
+    if (typeof value === 'object' && 'result' in value) {
+      return String(value.result ?? '');
+    }
+    if (cell.text) return String(cell.text);
+    return String(value);
+  }
+
+  private resolveColumnLayout(rows: string[][]): {
     startRow: number;
     msisdnColIndex: number;
     planIdColIndex: number;

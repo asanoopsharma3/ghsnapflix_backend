@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { extname } from 'path';
 import { ensureMtnUploadDir } from './mtn-storage.util';
 
-const ALLOWED_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
+const ALLOWED_EXTENSIONS = ['.xlsx', '.csv'];
 
 export const mtnExcelUploadOptions = {
   storage: diskStorage({
@@ -27,7 +27,7 @@ export const mtnExcelUploadOptions = {
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       cb(
         new BadRequestException(
-          'Only .xlsx, .xls, and .csv files are allowed',
+          'Only .xlsx and .csv files are allowed',
         ),
         false,
       );

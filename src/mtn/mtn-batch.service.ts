@@ -45,7 +45,8 @@ export class MtnBatchService {
     const absolutePath = file.path;
     const storedPath = toRelativeStoragePath(absolutePath);
 
-    const rows = this.excelService.readSubscriptionRowsFromFile(absolutePath);
+    const rows =
+      await this.excelService.readSubscriptionRowsFromFile(absolutePath);
     if (rows.length > MAX_MSISDN_PER_BATCH) {
       fs.unlinkSync(absolutePath);
       throw new BadRequestException(
